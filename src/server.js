@@ -8,6 +8,8 @@ import resourceRoutes from "./routes/resourceRoutes.js";
 import bookRoutes from "./routes/bookRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import articleRoutes from "./routes/articleRoutes.js";
+import commentRoutes from "./routes/commentRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -27,7 +29,8 @@ app.use("/api/books", bookRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/uploads", express.static("uploads"));
 app.use("/api/articles", articleRoutes);
-
+app.use("/api", commentRoutes);
+app.use("/api/notifications", notificationRoutes);
 // Middleware global de gestion d'erreurs
 app.use((err, req, res, next) => {
   console.error(err);
