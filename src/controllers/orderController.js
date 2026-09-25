@@ -1,5 +1,6 @@
 import Order from "../models/Order.js";
 import Book from "../models/Book.js";
+import { isValidTunisianPhone } from "../utils/validators.js";
 
 // POST /api/orders (public) — BF-04
 export const createOrder = async (req, res) => {
@@ -8,6 +9,12 @@ export const createOrder = async (req, res) => {
 
     if (!livre || !nomClient || !telephone || !adresse) {
       return res.status(400).json({ message: "Tous les champs sont requis (livre, nomClient, telephone, adresse)" });
+    }
+
+    if (!isValidTunisianPhone(telephone)) {
+      return res.status(400).json({
+        message: "Le numéro de téléphone doit être un numéro tunisien valide (8 chiffres commençant par 2, 4, 5, 7 ou 9)",
+      });
     }
 
     const book = await Book.findById(livre);
