@@ -1,8 +1,8 @@
 import Order from "../models/Order.js";
 import Book from "../models/Book.js";
 import { isValidTunisianPhone } from "../utils/validators.js";
+import { notifyAdmins } from "../utils/notify.js";
 
-// POST /api/orders (public) — BF-04
 export const createOrder = async (req, res) => {
   try {
     const { livre, nomClient, telephone, adresse } = req.body;
@@ -22,6 +22,7 @@ export const createOrder = async (req, res) => {
 
     const order = await Order.create({ livre, nomClient, telephone, adresse });
 
+await notifyAdmins("order", `Nouvelle commande : "${book.titre}" par ${nomClient}`, "/admin/commandes");
     res.status(201).json({
       message: "Votre commande a été envoyée, nous vous contacterons bientôt",
       order,
@@ -31,7 +32,6 @@ export const createOrder = async (req, res) => {
   }
 };
 
-// GET /api/orders (Admin only) — BF-12
 export const listOrders = async (req, res) => {
   try {
     const { statut } = req.query;
@@ -45,7 +45,6 @@ export const listOrders = async (req, res) => {
   }
 };
 
-// PATCH /api/orders/:id/process (Admin only) — BF-12
 export const processOrder = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);

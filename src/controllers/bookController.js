@@ -1,6 +1,6 @@
 import Book from "../models/Book.js";
+import { notifyAdmins, notifyContributor } from "../utils/notify.js";
 
-// GET /api/books (public) — uniquement les livres validés
 export const listBooks = async (req, res) => {
   try {
     const books = await Book.find({ disponible: true, statut: "Validé" }).sort({ createdAt: -1 });
@@ -10,7 +10,6 @@ export const listBooks = async (req, res) => {
   }
 };
 
-// GET /api/books/:id (public)
 export const getBook = async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);
@@ -21,7 +20,6 @@ export const getBook = async (req, res) => {
   }
 };
 
-// GET /api/books/pending (Admin only)
 export const listPendingBooks = async (req, res) => {
   try {
     const books = await Book.find({ statut: "En attente" })
@@ -33,7 +31,6 @@ export const listPendingBooks = async (req, res) => {
   }
 };
 
-// GET /api/books/mine (Contributeur ou Admin connecté)
 export const listMyBooks = async (req, res) => {
   try {
     const books = await Book.find({ contributeur: req.user._id }).sort({ createdAt: -1 });
@@ -43,7 +40,6 @@ export const listMyBooks = async (req, res) => {
   }
 };
 
-// POST /api/books (Contributeur ou Admin, authentifié)
 export const createBook = async (req, res) => {
   try {
     const { titre, prix, description } = req.body;
@@ -58,13 +54,16 @@ export const createBook = async (req, res) => {
       statut: req.user.role === "admin" ? "Validé" : "En attente",
       contributeur: req.user._id,
     });
+
+    if (req.user.role !== "admin") {
+await notifyAdmins("book", `Nouveau livre soumis : "${titre}"`, "/admin/validation-livres");    }
+
     res.status(201).json(book);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
 
-// PATCH /api/books/:id (Admin, ou Contributeur propriétaire)
 export const updateBook = async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);
@@ -82,7 +81,6 @@ export const updateBook = async (req, res) => {
     if (disponible !== undefined) book.disponible = disponible;
     if (req.file) book.image = req.file.filename;
 
-    // Si un Contributeur modifie un livre déjà validé, il repasse en attente
     if (req.user.role !== "admin") book.statut = "En attente";
 
     await book.save();
@@ -92,7 +90,6 @@ export const updateBook = async (req, res) => {
   }
 };
 
-// PATCH /api/books/:id/validate (Admin only)
 export const validateBook = async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);
@@ -100,13 +97,14 @@ export const validateBook = async (req, res) => {
 
     book.statut = "Validé";
     await book.save();
+
+await notifyContributor(book.contributeur, "book_validated", `Votre livre "${book.titre}" a été validé.`, "/contributeur/mes-livres");
     res.json({ message: "Livre validé", book });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
 
-// DELETE /api/books/:id (Admin only)
 export const deleteBook = async (req, res) => {
   try {
     const book = await Book.findById(req.params.id);

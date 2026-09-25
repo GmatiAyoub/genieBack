@@ -1,6 +1,6 @@
 import Article from "../models/Article.js";
+import { notifyAdmins, notifyContributor } from "../utils/notify.js";
 
-// GET /api/articles (public)
 export const listArticles = async (req, res) => {
   try {
     const articles = await Article.find({ publie: true, statut: "Validé" }).sort({ createdAt: -1 });
@@ -10,7 +10,6 @@ export const listArticles = async (req, res) => {
   }
 };
 
-// GET /api/articles/pending (Admin only)
 export const listPendingArticles = async (req, res) => {
   try {
     const articles = await Article.find({ statut: "En attente" })
@@ -22,7 +21,6 @@ export const listPendingArticles = async (req, res) => {
   }
 };
 
-// GET /api/articles/mine (Contributeur ou Admin connecté)
 export const listMyArticles = async (req, res) => {
   try {
     const articles = await Article.find({ contributeur: req.user._id }).sort({ createdAt: -1 });
@@ -32,7 +30,6 @@ export const listMyArticles = async (req, res) => {
   }
 };
 
-// GET /api/articles/:id (public)
 export const getArticle = async (req, res) => {
   try {
     const article = await Article.findById(req.params.id);
@@ -43,7 +40,6 @@ export const getArticle = async (req, res) => {
   }
 };
 
-// POST /api/articles (Contributeur ou Admin)
 export const createArticle = async (req, res) => {
   try {
     const { titre, contenu, rtl } = req.body;
@@ -57,13 +53,16 @@ export const createArticle = async (req, res) => {
       statut: req.user.role === "admin" ? "Validé" : "En attente",
       contributeur: req.user._id,
     });
+
+    if (req.user.role !== "admin") {
+await notifyAdmins("article", `Nouveau blog soumis : "${titre}"`, "/admin/validation-blog");    }
+
     res.status(201).json(article);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
 
-// PATCH /api/articles/:id
 export const updateArticle = async (req, res) => {
   try {
     const article = await Article.findById(req.params.id);
@@ -84,7 +83,6 @@ export const updateArticle = async (req, res) => {
   }
 };
 
-// PATCH /api/articles/:id/validate (Admin only)
 export const validateArticle = async (req, res) => {
   try {
     const article = await Article.findById(req.params.id);
@@ -92,13 +90,14 @@ export const validateArticle = async (req, res) => {
 
     article.statut = "Validé";
     await article.save();
+
+await notifyContributor(article.contributeur, "article_validated", `Votre blog "${article.titre}" a été validé.`, "/contributeur/mes-articles");
     res.json({ message: "Article validé", article });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
 
-// DELETE /api/articles/:id (Admin only)
 export const deleteArticle = async (req, res) => {
   try {
     const article = await Article.findById(req.params.id);

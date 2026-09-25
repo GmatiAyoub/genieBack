@@ -1,9 +1,8 @@
 import crypto from "crypto";
 import Comment from "../models/Comment.js";
 import Article from "../models/Article.js";
-import Notification from "../models/Notification.js";
+import { notifyAdmins } from "../utils/notify.js";
 
-// GET /api/articles/:id/comments (public) — editToken jamais renvoyé publiquement
 export const listComments = async (req, res) => {
   try {
     const comments = await Comment.find({ article: req.params.id })
@@ -15,7 +14,6 @@ export const listComments = async (req, res) => {
   }
 };
 
-// POST /api/articles/:id/comments (public, authentification optionnelle)
 export const createComment = async (req, res) => {
   try {
     const article = await Article.findById(req.params.id);
@@ -44,20 +42,13 @@ export const createComment = async (req, res) => {
       editToken,
     });
 
-    // Notification pour l'Admin à chaque nouveau commentaire
-    await Notification.create({
-      recipientRole: "admin",
-      type: "comment",
-      message: `Nouveau ${parentComment ? "réponse" : "commentaire"} sur "${article.titre}"`,
-    });
-
-    res.status(201).json(comment); // editToken inclus ICI uniquement, à la création
+await notifyAdmins("comment", `Nouveau ${parentComment ? "réponse" : "commentaire"} sur "${article.titre}"`, `/blog#article-${article._id}`);
+    res.status(201).json(comment);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
 
-// PATCH /api/comments/:id — modification par l'auteur (via editToken) ou par l'Admin
 export const updateComment = async (req, res) => {
   try {
     const comment = await Comment.findById(req.params.id);
@@ -83,7 +74,6 @@ export const updateComment = async (req, res) => {
   }
 };
 
-// DELETE /api/comments/:id (Admin only)
 export const deleteComment = async (req, res) => {
   try {
     const comment = await Comment.findById(req.params.id);
