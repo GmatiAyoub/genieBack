@@ -1,5 +1,6 @@
 import Book from "../models/Book.js";
 import { notifyAdmins, notifyContributor } from "../utils/notify.js";
+import { uploadBufferToCloudinary } from "../utils/uploadToCloudinary.js";
 
 export const listBooks = async (req, res) => {
   try {
@@ -46,17 +47,24 @@ export const createBook = async (req, res) => {
     if (!titre || prix === undefined) {
       return res.status(400).json({ message: "titre et prix sont requis" });
     }
+
+    let imageUrl = "";
+    if (req.file) {
+      imageUrl = await uploadBufferToCloudinary(req.file.buffer, "genie-bac/books");
+    }
+
     const book = await Book.create({
       titre,
       prix,
       description,
-      image: req.file ? req.file.filename : "",
+      image: imageUrl,
       statut: req.user.role === "admin" ? "Validé" : "En attente",
       contributeur: req.user._id,
     });
 
     if (req.user.role !== "admin") {
-await notifyAdmins("book", `Nouveau livre soumis : "${titre}"`, "/admin/validation-livres");    }
+      await notifyAdmins("book", `Nouveau livre soumis : "${titre}"`, "/admin/validation-livres");
+    }
 
     res.status(201).json(book);
   } catch (error) {
@@ -79,7 +87,10 @@ export const updateBook = async (req, res) => {
     if (prix !== undefined) book.prix = prix;
     if (description !== undefined) book.description = description;
     if (disponible !== undefined) book.disponible = disponible;
-    if (req.file) book.image = req.file.filename;
+
+    if (req.file) {
+      book.image = await uploadBufferToCloudinary(req.file.buffer, "genie-bac/books");
+    }
 
     if (req.user.role !== "admin") book.statut = "En attente";
 
@@ -98,7 +109,8 @@ export const validateBook = async (req, res) => {
     book.statut = "Validé";
     await book.save();
 
-await notifyContributor(book.contributeur, "book_validated", `Votre livre "${book.titre}" a été validé.`, "/contributeur/mes-livres");
+    await notifyContributor(book.contributeur, "book_validated", `Votre livre "${book.titre}" a été validé.`, "/contributeur/mes-livres");
+
     res.json({ message: "Livre validé", book });
   } catch (error) {
     res.status(400).json({ message: error.message });

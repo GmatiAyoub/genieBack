@@ -1,5 +1,6 @@
 import Resource from "../models/Resource.js";
 import { notifyAdmins, notifyContributor } from "../utils/notify.js";
+import { uploadBufferToCloudinary } from "../utils/uploadToCloudinary.js";
 
 export const createResource = async (req, res) => {
   try {
@@ -10,17 +11,20 @@ export const createResource = async (req, res) => {
       return res.status(400).json({ message: "titre, matiere et type sont requis" });
     }
 
+    const fileUrl = await uploadBufferToCloudinary(req.file.buffer, "genie-bac/resources");
+
     const resource = await Resource.create({
       titre,
       matiere,
       type,
-      fichier: req.file.filename,
+      fichier: fileUrl,
       statut: req.user.role === "admin" ? "Validé" : "En attente",
       contributeur: req.user._id,
     });
 
     if (req.user.role !== "admin") {
-await notifyAdmins("resource", `Nouvelle ressource soumise : "${titre}"`, "/admin/validation-ressources");    }
+      await notifyAdmins("resource", `Nouvelle ressource soumise : "${titre}"`, "/admin/validation-ressources");
+    }
 
     res.status(201).json(resource);
   } catch (error) {
@@ -61,7 +65,8 @@ export const validateResource = async (req, res) => {
     resource.statut = "Validé";
     await resource.save();
 
-await notifyContributor(resource.contributeur, "resource_validated", `Votre ressource "${resource.titre}" a été validée.`, "/contributeur/mes-ressources");
+    await notifyContributor(resource.contributeur, "resource_validated", `Votre ressource "${resource.titre}" a été validée.`, "/contributeur/mes-ressources");
+
     res.json({ message: "Ressource validée", resource });
   } catch (error) {
     res.status(400).json({ message: error.message });
