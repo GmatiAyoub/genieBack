@@ -11,8 +11,8 @@ export const createResource = async (req, res) => {
       return res.status(400).json({ message: "titre, matiere et type sont requis" });
     }
 
-    const fileUrl = await uploadBufferToCloudinary(req.file.buffer, "genie-bac/resources");
-
+    const fileUrl = await uploadBufferToCloudinary(req.file.buffer, "genie-bac/resources", "raw");
+    
     const resource = await Resource.create({
       titre,
       matiere,
