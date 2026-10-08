@@ -28,3 +28,10 @@ export const commentLimiter = build({
   limit: 30,
   message: { message: "Trop de commentaires envoyés. Réessayez dans quelques minutes." },
 });
+// Changement de mot de passe : 10 échecs max par IP toutes les 15 minutes
+export const passwordLimiter = build({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  skipSuccessfulRequests: true,
+  message: { message: "Trop de tentatives. Réessayez dans 15 minutes." },
+});
