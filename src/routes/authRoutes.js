@@ -1,10 +1,11 @@
 import express from "express";
 import { login, createContributor, listContributors, deleteContributor } from "../controllers/authController.js";
 import { protect, adminOnly } from "../middlewares/authMiddleware.js";
+import { loginLimiter } from "../middlewares/rateLimiters.js";
 
 const router = express.Router();
 
-router.post("/login", login);
+router.post("/login", loginLimiter, login);
 
 router.post("/users", protect, adminOnly, createContributor);
 router.get("/users", protect, adminOnly, listContributors);
