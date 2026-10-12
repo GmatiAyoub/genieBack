@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 const orderSchema = new mongoose.Schema(
   {
     livre: { type: mongoose.Schema.Types.ObjectId, ref: "Book", required: true },
+    titreLivre: { type: String }, // copie du titre au moment de la commande
+    prixLivre: { type: Number }, // copie du prix au moment de la commande
     nomClient: { type: String, required: true },
     telephone: { type: String, required: true },
     adresse: { type: String, required: true },

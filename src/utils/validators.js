@@ -1,9 +1,14 @@
-// Téléphone tunisien : 8 chiffres commençant par 2, 4, 5, 7 ou 9, avec ou sans +216 / 216
+// Téléphone tunisien : 8 chiffres commençant par 2, 4, 5, 7 ou 9,
+// avec ou sans indicatif (+216, 00216 ou 216). Espaces, points et tirets tolérés.
+const cleanPhone = (phone) => phone.replace(/[\s.\-]/g, "");
+
 export const isValidTunisianPhone = (phone) => {
   if (typeof phone !== "string") return false; // refuse aussi les nombres/objets envoyés en JSON
-  const cleaned = phone.replace(/\s/g, "");
-  return /^(\+216|216)?[24579]\d{7}$/.test(cleaned);
+  return /^(\+216|00216|216)?[24579]\d{7}$/.test(cleanPhone(phone));
 };
+
+// Format enregistré en base : +216XXXXXXXX (à appeler après validation)
+export const normalizeTunisianPhone = (phone) => "+216" + cleanPhone(phone).slice(-8);
 
 export const isValidEmail = (email) =>
   typeof email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);

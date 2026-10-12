@@ -1,14 +1,24 @@
 import Order from "../models/Order.js";
 import Book from "../models/Book.js";
-import { isValidTunisianPhone } from "../utils/validators.js";
+import { isValidTunisianPhone, normalizeTunisianPhone } from "../utils/validators.js";
 import { notifyAdmins } from "../utils/notify.js";
 
+const isText = (v) => typeof v === "string" && v.trim().length > 0;
+
+// POST /api/orders (public) — BF-04
 export const createOrder = async (req, res) => {
   try {
-    const { livre, nomClient, telephone, adresse } = req.body;
+    const { livre, nomClient, telephone, adresse } = req.body || {};
 
-    if (!livre || !nomClient || !telephone || !adresse) {
+    if (
+      !isText(livre) || !isText(nomClient) || !isText(adresse) ||
+      telephone === undefined || telephone === null || telephone === ""
+    ) {
       return res.status(400).json({ message: "Tous les champs sont requis (livre, nomClient, telephone, adresse)" });
+    }
+
+    if (!/^[0-9a-fA-F]{24}$/.test(livre.trim())) {
+      return res.status(400).json({ message: "Livre invalide" });
     }
 
     if (!isValidTunisianPhone(telephone)) {
@@ -17,12 +27,25 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    const book = await Book.findById(livre);
-    if (!book) return res.status(404).json({ message: "Livre introuvable" });
+    if (nomClient.trim().length > 100 || adresse.trim().length > 300) {
+      return res.status(400).json({ message: "Nom ou adresse trop long" });
+    }
 
-    const order = await Order.create({ livre, nomClient, telephone, adresse });
+    const book = await Book.findById(livre.trim());
+    if (!book || book.statut !== "Validé" || !book.disponible) {
+      return res.status(404).json({ message: "Livre introuvable ou indisponible" });
+    }
 
-    await notifyAdmins("order", `Nouvelle commande : "${book.titre}" par ${nomClient}`, "/admin/commandes");
+    const order = await Order.create({
+      livre: book._id,
+      titreLivre: book.titre,
+      prixLivre: book.prix,
+      nomClient: nomClient.trim(),
+      telephone: normalizeTunisianPhone(telephone),
+      adresse: adresse.trim(),
+    });
+
+    await notifyAdmins("order", `Nouvelle commande : "${book.titre}" par ${order.nomClient}`, "/admin/commandes");
 
     res.status(201).json({
       message: "Votre commande a été envoyée, nous vous contacterons bientôt",
@@ -33,12 +56,13 @@ export const createOrder = async (req, res) => {
   }
 };
 
+// GET /api/orders (Admin only) — BF-12
 export const listOrders = async (req, res) => {
   try {
     const { statut, paiement } = req.query;
     const filter = {};
-    if (statut) filter.statut = statut;
-    if (paiement) filter.paiement = paiement;
+    if (["Nouveau", "Traité"].includes(statut)) filter.statut = statut;
+    if (["Payé", "Non payé"].includes(paiement)) filter.paiement = paiement;
 
     const orders = await Order.find(filter).populate("livre", "titre prix").sort({ createdAt: -1 });
     res.json(orders);
