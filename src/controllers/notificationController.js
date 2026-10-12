@@ -1,15 +1,18 @@
 import Notification from "../models/Notification.js";
 
+// Une notification appartient à un rôle, et éventuellement à un utilisateur précis
+const ownFilter = (user) => ({
+  recipientRole: user.role,
+  $or: [{ recipientUser: null }, { recipientUser: user._id }],
+});
+
 // GET /api/notifications — toutes les non lues + les 5 dernières lues
 export const listNotifications = async (req, res) => {
   try {
-    const baseFilter = {
-      recipientRole: req.user.role,
-      $or: [{ recipientUser: null }, { recipientUser: req.user._id }],
-    };
+    const base = ownFilter(req.user);
 
-    const unread = await Notification.find({ ...baseFilter, read: false }).sort({ createdAt: -1 });
-    const readOnes = await Notification.find({ ...baseFilter, read: true })
+    const unread = await Notification.find({ ...base, read: false }).sort({ createdAt: -1 });
+    const readOnes = await Notification.find({ ...base, read: true })
       .sort({ createdAt: -1 })
       .limit(5);
 
@@ -23,10 +26,12 @@ export const listNotifications = async (req, res) => {
   }
 };
 
+// PATCH /api/notifications/:id/read — uniquement ses propres notifications
 export const markAsRead = async (req, res) => {
   try {
-    const notif = await Notification.findById(req.params.id);
+    const notif = await Notification.findOne({ _id: req.params.id, ...ownFilter(req.user) });
     if (!notif) return res.status(404).json({ message: "Notification introuvable" });
+
     notif.read = true;
     await notif.save();
     res.json(notif);
@@ -35,16 +40,10 @@ export const markAsRead = async (req, res) => {
   }
 };
 
+// PATCH /api/notifications/read-all
 export const markAllAsRead = async (req, res) => {
   try {
-    await Notification.updateMany(
-      {
-        recipientRole: req.user.role,
-        $or: [{ recipientUser: null }, { recipientUser: req.user._id }],
-        read: false,
-      },
-      { read: true }
-    );
+    await Notification.updateMany({ ...ownFilter(req.user), read: false }, { read: true });
     res.json({ message: "Toutes les notifications marquées comme lues" });
   } catch (error) {
     res.status(400).json({ message: error.message });

@@ -11,5 +11,6 @@ const notificationSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
+// Suppression automatique des notifications de plus de 90 jours
+notificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 90 });
 export default mongoose.model("Notification", notificationSchema);
