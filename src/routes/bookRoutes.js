@@ -11,10 +11,11 @@ import {
 } from "../controllers/bookController.js";
 import { protect, adminOnly } from "../middlewares/authMiddleware.js";
 import { uploadImage } from "../middlewares/uploadImageMiddleware.js";
+import { cachePublic } from "../middlewares/cache.js";
 
 const router = express.Router();
 
-router.get("/", listBooks);
+router.get("/", cachePublic(30), listBooks);
 router.get("/pending", protect, adminOnly, listPendingBooks);
 router.get("/mine", protect, listMyBooks);
 router.get("/:id", getBook);

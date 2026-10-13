@@ -13,6 +13,7 @@ import orderRoutes from "./routes/orderRoutes.js";
 import articleRoutes from "./routes/articleRoutes.js";
 import commentRoutes from "./routes/commentRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import { invalidateOnWrite } from "./middlewares/cache.js";
 
 dotenv.config();
 connectDB();
@@ -25,6 +26,7 @@ app.set("trust proxy", Number(process.env.TRUST_PROXY_HOPS ?? 1));
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+app.use(invalidateOnWrite);
 
 // Santé de l'API : renvoie 503 si la base de données est injoignable (utile pour la surveillance)
 app.get("/api/health", (req, res) => {

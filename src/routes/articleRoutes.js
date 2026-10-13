@@ -10,10 +10,10 @@ import {
   deleteArticle,
 } from "../controllers/articleController.js";
 import { protect, adminOnly } from "../middlewares/authMiddleware.js";
-
+import { cachePublic } from "../middlewares/cache.js";
 const router = express.Router();
 
-router.get("/", listArticles);
+router.get("/", cachePublic(30), listArticles);
 router.get("/pending", protect, adminOnly, listPendingArticles);
 router.get("/mine", protect, listMyArticles);
 router.get("/:id", getArticle);

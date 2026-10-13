@@ -9,10 +9,11 @@ import {
 } from "../controllers/resourceController.js";
 import { protect, adminOnly } from "../middlewares/authMiddleware.js";
 import { upload } from "../middlewares/uploadMiddleware.js";
+import { cachePublic } from "../middlewares/cache.js";
 
 const router = express.Router();
 
-router.get("/", listPublicResources); // public
+router.get("/", cachePublic(30), listPublicResources);
 router.get("/pending", protect, adminOnly, listPendingResources);
 router.get("/mine", protect, listMyResources);
 router.post("/", protect, upload.single("fichier"), createResource); // Contributeur ou Admin
